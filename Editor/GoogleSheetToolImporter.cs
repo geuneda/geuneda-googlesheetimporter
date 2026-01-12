@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Threading.Tasks;
-using GameLovers.GoogleSheetImporter;
+using Geuneda.GoogleSheetImporter;
 using UnityEditor;
 using UnityEditor.Callbacks;
 using UnityEngine;
@@ -10,7 +10,7 @@ using UnityEngine.Networking;
 
 // ReSharper disable once CheckNamespace
 
-namespace GameLoversEditor.GoogleSheetImporter
+namespace GeunedaEditor.GoogleSheetImporter
 {
 	/// <summary>
 	/// Customizes the visual inspector of the google sheet importing tool <seealso cref="GoogleSheetImporter"/>

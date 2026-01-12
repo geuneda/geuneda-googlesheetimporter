@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using Configs;
-using GameLovers.GoogleSheetImporter;
-using GameLoversEditor.GoogleSheetImporter;
+using Geuneda.GoogleSheetImporter;
+using GeunedaEditor.GoogleSheetImporter;
 
 namespace SheetImporters
 {

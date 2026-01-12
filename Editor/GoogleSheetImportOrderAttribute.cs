@@ -2,7 +2,7 @@ using System;
 
 // ReSharper disable once CheckNamespace
 
-namespace GameLoversEditor.GoogleSheetImporter
+namespace GeunedaEditor.GoogleSheetImporter
 {
 	/// <summary>
 	/// Attribute to set the order of importing the data of a <seealso cref="GoogleSheetImporter"/>

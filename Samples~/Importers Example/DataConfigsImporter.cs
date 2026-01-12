@@ -1,5 +1,5 @@
 using Configs;
-using GameLoversEditor.GoogleSheetImporter;
+using GeunedaEditor.GoogleSheetImporter;
 
 namespace SheetImporters
 {

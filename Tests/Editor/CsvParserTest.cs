@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using GameLovers.GoogleSheetImporter;
+using Geuneda.GoogleSheetImporter;
 using NUnit.Framework;
 
 // ReSharper disable ClassNeverInstantiated.Global
@@ -8,7 +8,7 @@ using NUnit.Framework;
 // ReSharper disable CheckNamespace
 // ReSharper disable UnassignedField.Global
 
-namespace GameLoversEditor.GoogleSheetImporter.Tests
+namespace GeunedaEditor.GoogleSheetImporter.Tests
 {
 	public class CsvParserTest
 	{

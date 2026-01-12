@@ -3,7 +3,7 @@ using UnityEngine;
 
 // ReSharper disable once CheckNamespace
 
-namespace GameLoversEditor.GoogleSheetImporter
+namespace GeunedaEditor.GoogleSheetImporter
 {
 	/// <summary>
 	/// Scriptable Object tool to import all or specific google sheet data

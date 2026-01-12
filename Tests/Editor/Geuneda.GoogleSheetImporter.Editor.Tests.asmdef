@@ -1,9 +1,9 @@
 {
-    "name": "GameLovers.GoogleSheetImporter.Editor.Tests",
+    "name": "Geuneda.GoogleSheetImporter.Editor.Tests",
     "references": [
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner",
-        "GameLovers.GoogleSheetImporter"
+        "Geuneda.GoogleSheetImporter"
     ],
     "includePlatforms": [
         "Editor"

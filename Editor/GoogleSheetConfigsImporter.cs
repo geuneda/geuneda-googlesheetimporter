@@ -1,13 +1,13 @@
 using System;
 using System.Collections.Generic;
-using GameLovers.ConfigsProvider;
-using GameLovers.GoogleSheetImporter;
+using Geuneda.ConfigsProvider;
+using Geuneda.GoogleSheetImporter;
 using UnityEditor;
 using UnityEngine;
 
 // ReSharper disable once CheckNamespace
 
-namespace GameLoversEditor.GoogleSheetImporter
+namespace GeunedaEditor.GoogleSheetImporter
 {
 	/// <summary>
 	/// Interface to import a single Scriptable Object.

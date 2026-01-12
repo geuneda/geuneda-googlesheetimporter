@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
-using GameLoversEditor.GoogleSheetImporter;
+using GeunedaEditor.GoogleSheetImporter;
 using UnityEditor;
 
 namespace SheetImporters

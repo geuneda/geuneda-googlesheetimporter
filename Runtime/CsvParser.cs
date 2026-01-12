@@ -9,7 +9,7 @@ using UnityEngine;
 
 // ReSharper disable once CheckNamespace
 
-namespace GameLovers.GoogleSheetImporter
+namespace Geuneda.GoogleSheetImporter
 {
 	/// <summary>
 	/// Helper class to parse CSV text
