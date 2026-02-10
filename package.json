@@ -2,15 +2,14 @@
   "name": "com.geuneda.googlesheetimporter",
   "displayName": "GoogleSheet Importer",
   "author": "geuneda",
-  "version": "0.7.1",
-  "unity": "2021.3",
+  "version": "0.7.2",
+  "unity": "6000.0",
   "license": "MIT",
   "description": "Google 스프레드시트 데이터를 ScriptableObject 설정 데이터로 가져오는 도구 패키지입니다.\n\nGoogle 스프레드시트 가져오기 설정을 구성하려면:\n- 프로젝트 뷰에서 우클릭 > Create > ScriptableObjects > Editor > GoogleSheetImporter\n- ScriptableObject 없이 모든 Google 스프레드시트 데이터를 가져오려면 Tools > Import Google Sheet Data를 클릭합니다.",
   "type": "tool",
   "dependencies": {
     "com.unity.nuget.newtonsoft-json": "2.0.0",
-    "com.geuneda.dataextensions": "0.4.0",
-    "com.geuneda.configsprovider": "0.1.0"
+    "com.geuneda.gamedata": "1.0.0"
   },
   "samples": [
     {

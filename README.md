@@ -15,10 +15,9 @@ Google 스프레드시트 데이터를 ScriptableObject 설정 데이터로 가�
 
 ## 요구 사항
 
-- Unity 2021.3 이상
+- Unity 6000.0 이상
 - Newtonsoft.Json 패키지 (`com.unity.nuget.newtonsoft-json`)
-- Geuneda Data Extensions 패키지 (`com.geuneda.dataextensions`)
-- Geuneda Configs Provider 패키지 (`com.geuneda.configsprovider`)
+- Geuneda GameData 패키지 (`com.geuneda.gamedata`)
 
 ## 설치 방법
 

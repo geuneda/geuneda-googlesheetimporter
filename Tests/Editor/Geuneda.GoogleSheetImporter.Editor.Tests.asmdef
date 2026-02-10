@@ -3,7 +3,8 @@
     "references": [
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner",
-        "Geuneda.GoogleSheetImporter"
+        "Geuneda.GoogleSheetImporter",
+        "Geuneda.DataExtensions"
     ],
     "includePlatforms": [
         "Editor"
