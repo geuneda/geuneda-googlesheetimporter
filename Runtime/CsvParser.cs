@@ -11,7 +11,7 @@ using Newtonsoft.Json;
 namespace Geuneda.GoogleSheetImporter
 {
 	/// <summary>
-	/// Helper class to parse CSV text
+	/// CSV 텍스트를 파싱하는 헬퍼 클래스
 	/// </summary>
 	public static class CsvParser
 	{
@@ -24,9 +24,9 @@ namespace Geuneda.GoogleSheetImporter
 		public static readonly string[] NewLineChars = { "\r\n", "\r", "\n" };
 
 		/// <summary>
-		/// Parses the entire <paramref name="csv"/> text.
-		/// Each row is an element on the returned list
-		/// Each column is an element on the returned dictionary. The dictionary key will be the CSV header
+		/// 전체 <paramref name="csv"/> 텍스트를 파싱합니다.
+		/// 각 행은 반환되는 리스트의 요소입니다.
+		/// 각 열은 반환되는 딕셔너리의 요소입니다. 딕셔너리 키는 CSV 헤더가 됩니다.
 		/// </summary>
 		public static List<Dictionary<string, string>> ConvertCsv(string csv)
 		{
@@ -46,9 +46,9 @@ namespace Geuneda.GoogleSheetImporter
 						continue;
 					}
 
-					// fix for any extra invalid columns
-					// two empty columns in a row are parsed as a single empty value 
-					// e.g (one,two,,) ir parsed as [one, two, ""]
+					// 추가적인 유효하지 않은 열에 대한 수정
+					// 연속된 두 개의 빈 열은 하나의 빈 값으로 파싱됨
+					// 예: (one,two,,)는 [one, two, ""]로 파싱됨
 					if (j >= values.Length)
 					{
 						dictionary.Add(headlines[j], "");
@@ -73,10 +73,10 @@ namespace Geuneda.GoogleSheetImporter
 		}
 
 		/// <summary>
-		/// Deserializes the given CSV <paramref name="data"/> cell values to an object of the given <paramref name="type"/> type
+		/// 주어진 CSV <paramref name="data"/> 셀 값을 주어진 <paramref name="type"/> 타입의 객체로 역직렬화합니다
 		/// </summary>
 		/// <remarks>
-		/// It provides extra custom <paramref name="deserializers"/> to specific parsing
+		/// 특정 파싱을 위한 추가 사용자 정의 <paramref name="deserializers"/>를 제공합니다
 		/// </remarks>
 		public static object DeserializeTo(Type type, Dictionary<string, string> data,
 										   params Func<string, Type, object>[] deserializers)
@@ -103,11 +103,11 @@ namespace Geuneda.GoogleSheetImporter
 		}
 
 		/// <summary>
-		/// Deserializes the given <paramref name="data"/> to the given <paramref name="type"/> in a <see cref="object"/>
-		/// format as a result to be set via reflection.
+		/// 주어진 <paramref name="data"/>를 주어진 <paramref name="type"/>으로 <see cref="object"/>
+		/// 형식으로 역직렬화하여 리플렉션을 통해 설정할 수 있는 결과를 반환합니다.
 		/// </summary>
 		/// <remarks>
-		/// It provides extra custom <paramref name="deserializers"/> to specific parsing
+		/// 특정 파싱을 위한 추가 사용자 정의 <paramref name="deserializers"/>를 제공합니다
 		/// </remarks>
 		public static object DeserializeObject(string data, Type type,
 											   params Func<string, Type, object>[] deserializers)
@@ -146,7 +146,7 @@ namespace Geuneda.GoogleSheetImporter
 		}
 
 		/// <summary>
-		/// Deserializes a list of custom complex (non-primitive) types, with their own headers / definitions.
+		/// 고유한 헤더/정의를 가진 사용자 정의 복합(비원시) 타입의 리스트를 역직렬화합니다.
 		/// </summary>
 		public static object DeserializeSubList(List<Dictionary<string, string>> data, int startIndex, Type type,
 												string fieldName,
@@ -168,7 +168,7 @@ namespace Geuneda.GoogleSheetImporter
 		}
 
 		/// <summary>
-		/// Extracts the data dictionary of a sub list from the base deserialization data of an object.
+		/// 객체의 기본 역직렬화 데이터에서 서브 리스트의 데이터 딕셔너리를 추출합니다.
 		/// </summary>
 		private static List<Dictionary<string, string>> GetSubListDictionary(
 			List<Dictionary<string, string>> data, int startIndex)
@@ -206,15 +206,15 @@ namespace Geuneda.GoogleSheetImporter
 		}
 
 		/// <summary>
-		/// Parses the given <paramref name="text"/> into a possible array of the given <typeparamref name="T"/>
-		/// A text is in array format as long as is divided by ',', '{}', '()' or '[]' (ex: 1,2,3; {1,2}{4,5}, [1,2,3])
-		/// If the given <paramref name="text"/> is not in an array format, it will return an array with <paramref name="text"/> as the only element
+		/// 주어진 <paramref name="text"/>를 주어진 <typeparamref name="T"/>의 배열로 파싱합니다.
+		/// 텍스트가 ',', '{}', '()' 또는 '[]'로 구분되어 있으면 배열 형식입니다 (예: 1,2,3; {1,2}{4,5}, [1,2,3])
+		/// 주어진 <paramref name="text"/>가 배열 형식이 아닌 경우, <paramref name="text"/>를 유일한 요소로 가진 배열을 반환합니다
 		/// </summary>
 		/// <remarks>
-		/// It provides extra custom <paramref name="deserializers"/> to specific parsing
+		/// 특정 파싱을 위한 추가 사용자 정의 <paramref name="deserializers"/>를 제공합니다
 		/// </remarks>
 		/// <exception cref="FormatException">
-		/// Thrown if the given <paramref name="text"/> is not in the given <typeparamref name="T"/> type format
+		/// 주어진 <paramref name="text"/>가 주어진 <typeparamref name="T"/> 타입 형식이 아닌 경우 발생합니다
 		/// </exception>
 		public static List<T> ArrayParse<T>(string text, params Func<string, Type, object>[] deserializers)
 		{
@@ -236,20 +236,20 @@ namespace Geuneda.GoogleSheetImporter
 		}
 
 		/// <summary>
-		/// Parses the given <paramref name="text"/> into a <seealso cref="Dictionary{TKey, TValue}"/> type.
-		/// A text is in <seealso cref="Dictionary{TKey, TValue}"/> type format if follows the same rules
-		/// of <seealso cref="ArrayParse{T}"/> and has at least 2 elements inside
-		/// If the given <paramref name="text"/> is not in an <seealso cref="Dictionary{TKey, TValue}"/> type format,
-		/// it will return an empty dictionary
+		/// 주어진 <paramref name="text"/>를 <seealso cref="Dictionary{TKey, TValue}"/> 타입으로 파싱합니다.
+		/// <seealso cref="ArrayParse{T}"/>와 동일한 규칙을 따르고 최소 2개의 요소가 있으면
+		/// <seealso cref="Dictionary{TKey, TValue}"/> 타입 형식입니다.
+		/// 주어진 <paramref name="text"/>가 <seealso cref="Dictionary{TKey, TValue}"/> 타입 형식이 아닌 경우
+		/// 빈 딕셔너리를 반환합니다
 		/// </summary>
 		/// <remarks>
-		/// It provides extra custom <paramref name="deserializers"/> to specific parsing
+		/// 특정 파싱을 위한 추가 사용자 정의 <paramref name="deserializers"/>를 제공합니다
 		/// </remarks>
 		/// <exception cref="FormatException">
-		/// Thrown if the given <paramref name="text"/> is not in the given <typeparamref name="TKey"/> or <typeparamref name="TValue"/> type format
+		/// 주어진 <paramref name="text"/>가 주어진 <typeparamref name="TKey"/> 또는 <typeparamref name="TValue"/> 타입 형식이 아닌 경우 발생합니다
 		/// </exception>
 		/// <exception cref="IndexOutOfRangeException">
-		/// Thrown if the given <paramref name="text"/> has a odd amount of values to pair. Must always be an even amount of values
+		/// 주어진 <paramref name="text"/>에 쌍을 이룰 수 없는 홀수 개의 값이 있는 경우 발생합니다. 항상 짝수 개의 값이어야 합니다
 		/// </exception>
 		public static Dictionary<TKey, TValue> DictionaryParse<TKey, TValue>(
 			string text, params Func<string, Type, object>[] deserializers)
@@ -304,13 +304,13 @@ namespace Geuneda.GoogleSheetImporter
 		}
 
 		/// <summary>
-		/// Parses the given <paramref name="text"/> to the given <typeparamref name="T"/> type
+		/// 주어진 <paramref name="text"/>를 주어진 <typeparamref name="T"/> 타입으로 파싱합니다
 		/// </summary>
 		/// <remarks>
-		/// It provides extra custom <paramref name="deserializers"/> to specific parsing
+		/// 특정 파싱을 위한 추가 사용자 정의 <paramref name="deserializers"/>를 제공합니다
 		/// </remarks>
 		/// <exception cref="FormatException">
-		/// Thrown if the given <paramref name="text"/> is not in the given <typeparamref name="T"/> type format
+		/// 주어진 <paramref name="text"/>가 주어진 <typeparamref name="T"/> 타입 형식이 아닌 경우 발생합니다
 		/// </exception>
 		public static T Parse<T>(string text, params Func<string, Type, object>[] deserializers)
 		{
@@ -359,7 +359,7 @@ namespace Geuneda.GoogleSheetImporter
 				return TimeSpan.Parse(text);
 			}
 
-			//Handling Nullable types i.e, int?, double?, bool? .. etc
+			//Nullable 타입 처리 (예: int?, double?, bool? 등)
 			if (type.IsValueType && Nullable.GetUnderlyingType(type) != null)
 			{
 				// ReSharper disable once PossibleNullReferenceException
@@ -384,7 +384,7 @@ namespace Geuneda.GoogleSheetImporter
 
 		private static string[] EnumerateCsvLine(string line)
 		{
-			// Regex taken from http://wiki.unity3d.com/index.php?title=CSVReader
+			// 정규식 출처: http://wiki.unity3d.com/index.php?title=CSVReader
 			const string match = @"(((?<x>(?=[,\r\n]+))|""(?<x>([^""]|"""")+)""|(?<x>[^,\r\n]+)),?)";
 
 			var matches = Regex.Matches(line, match, RegexOptions.ExplicitCapture);

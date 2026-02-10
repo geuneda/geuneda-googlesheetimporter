@@ -5,14 +5,14 @@ using System;
 namespace GeunedaEditor.GoogleSheetImporter
 {
 	/// <summary>
-	/// Attribute to set the order of importing the data of a <seealso cref="GoogleSheetImporter"/>
-	/// The smaller the number the sooner is going to be imported. Default = int.MaxValue
+	/// <seealso cref="GoogleSheetImporter"/>의 데이터 임포트 순서를 설정하는 어트리뷰트
+	/// 숫자가 작을수록 먼저 임포트됩니다. 기본값 = int.MaxValue
 	/// </summary>
 	[AttributeUsage(AttributeTargets.Class)]
 	public class GoogleSheetImportOrderAttribute : Attribute
 	{
 		/// <summary>
-		/// The order of the sheet to be imported. Less means importing sooner
+		/// 시트의 임포트 순서. 값이 작을수록 먼저 임포트됩니다
 		/// </summary>
 		public int ImportOrder { get; }
 		

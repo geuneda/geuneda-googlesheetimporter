@@ -6,7 +6,7 @@ using UnityEngine;
 namespace GeunedaEditor.GoogleSheetImporter
 {
 	/// <summary>
-	/// Scriptable Object tool to import all or specific google sheet data
+	/// 전체 또는 특정 구글 시트 데이터를 임포트하는 ScriptableObject 도구
 	/// </summary>
 	[CreateAssetMenu(fileName = "GoogleSheetImporter", menuName = "ScriptableObjects/Editor/GoogleSheetImporter")]
 	public class GoogleSheetImporter : ScriptableObject

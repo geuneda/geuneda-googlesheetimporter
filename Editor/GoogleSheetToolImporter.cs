@@ -13,7 +13,7 @@ using UnityEngine.Networking;
 namespace GeunedaEditor.GoogleSheetImporter
 {
 	/// <summary>
-	/// Customizes the visual inspector of the google sheet importing tool <seealso cref="GoogleSheetImporter"/>
+	/// 구글 시트 임포트 도구 <seealso cref="GoogleSheetImporter"/>의 인스펙터 UI를 커스터마이즈합니다
 	/// </summary>
 	[CustomEditor(typeof(GoogleSheetImporter))]
 	public class GoogleSheetToolImporter : Editor
@@ -50,7 +50,7 @@ namespace GeunedaEditor.GoogleSheetImporter
 		{
 			if (_importers == null)
 			{
-				// Not yet initialized. Will initialized as soon has all scripts finish compiling
+				// 아직 초기화되지 않음. 모든 스크립트 컴파일이 완료되면 초기화됩니다
 				return;
 			}
 
