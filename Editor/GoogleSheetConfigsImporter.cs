@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using Geuneda.GameData;
+using Geuneda.DataExtensions;
 using Geuneda.GoogleSheetImporter;
 using UnityEditor;
 using UnityEngine;
