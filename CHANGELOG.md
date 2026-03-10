@@ -4,6 +4,15 @@
 이 형식은 [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)를 기반으로 하며,
 이 프로젝트는 [Semantic Versioning](http://semver.org/spec/v2.0.0.html)을 따릅니다.
 
+## [0.7.3] - 2026-03-10
+
+**Fixed**:
+- 시트가 100개 이상일 때 Google API rate limit 에러가 발생하는 문제를 수정
+- 지수 백오프 재시도 로직을 추가하여 HTTP 429/5xx 에러 시 자동 재시도
+- 요청을 순차 처리하고 요청 간 간격을 두어 rate limit 방지
+- 임포트 진행 중 중복 실행 방지 및 EditorProgressBar 표시를 추가
+- UnityWebRequest를 using 블록으로 래핑하여 메모리 누수를 방지
+
 ## [0.7.2] - 2026-01-14
 
 **Changed**:
