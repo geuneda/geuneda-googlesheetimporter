@@ -22,7 +22,7 @@ namespace GeunedaEditor.GoogleSheetImporter
 		private const int MaxRetryCount = 5;
 		private const int InitialDelayMs = 1000;
 		private const int MaxDelayMs = 60000;
-		private const int RequestIntervalMs = 200;
+		private const int RequestIntervalMs = 500;
 		private const string IsImportingSessionKey = "GoogleSheetToolImporter_IsImporting";
 
 		private static List<ImportData> _importers;
@@ -298,7 +298,7 @@ namespace GeunedaEditor.GoogleSheetImporter
 				{
 					var responseCode = request.responseCode;
 
-					if (responseCode == 429 || responseCode >= 500)
+					if (responseCode == 401 || responseCode == 403 || responseCode == 429 || responseCode >= 500)
 					{
 						Debug.LogWarning($"Request for {data.Type.Name} returned {responseCode}: {request.error}. Will retry.");
 						return RequestResult.RateLimited;
