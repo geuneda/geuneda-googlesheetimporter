@@ -36,6 +36,12 @@ namespace Geuneda.GoogleSheetImporter
 
 			for (var i = 1; i < lines.Length; i++)
 			{
+				// IGNORE_FIELD_CHAR(#)로 시작하는 행은 설명 행으로 간주하여 건너뜀
+				if (lines[i].StartsWith(IGNORE_FIELD_CHAR))
+				{
+					continue;
+				}
+
 				var dictionary = new Dictionary<string, string>(headlines.Length);
 				var values = EnumerateCsvLine(lines[i]);
 
