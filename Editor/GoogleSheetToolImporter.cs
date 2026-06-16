@@ -308,18 +308,65 @@ namespace GeunedaEditor.GoogleSheetImporter
 					return RequestResult.Failed;
 				}
 
-				var values = CsvParser.ConvertCsv(request.downloadHandler.text);
+				var csvText = request.downloadHandler.text;
+				var values = CsvParser.ConvertCsv(csvText);
 
 				if (values.Count == 0)
 				{
-					Debug.LogWarning($"The return sheet was not in CSV format:\n{request.downloadHandler.text}");
+					Debug.LogWarning($"The return sheet was not in CSV format:\n{csvText}");
 					return RequestResult.Failed;
 				}
 
 				data.Importer.Import(values);
+				SyncCsvFile(data.Importer, csvText, data.Type.Name);
 				Debug.Log($"Finished importing google sheet data from {data.Type.Name}");
 				return RequestResult.Success;
 			}
+		}
+
+		/// <summary>
+		/// 임포터가 <see cref="ICsvSyncTarget"/> 를 구현하면, 다운로드한 원본 CSV 를 LF 로 정규화하여
+		/// 지정 경로에 기록하고 에셋으로 재임포트한다. 기록 실패는 경고만 남기고 임포트 흐름을 막지 않는다.
+		/// </summary>
+		private static void SyncCsvFile(IGoogleSheetConfigsImporter importer, string csvText, string importerName)
+		{
+			if (importer is not ICsvSyncTarget syncTarget)
+			{
+				return;
+			}
+
+			var syncPath = syncTarget.CsvSyncPath;
+
+			if (string.IsNullOrWhiteSpace(syncPath))
+			{
+				return;
+			}
+
+			try
+			{
+				var normalized = NormalizeCsv(csvText);
+				System.IO.File.WriteAllText(syncPath, normalized);
+				AssetDatabase.ImportAsset(syncPath);
+				Debug.Log($"[GoogleSheetImporter] CSV synced: {syncPath}");
+			}
+			catch (Exception e)
+			{
+				Debug.LogWarning($"[GoogleSheetImporter] CSV sync failed for {importerName} ({syncPath}): {e.Message}");
+			}
+		}
+
+		/// <summary>
+		/// 구글 시트 export(CRLF)를 버전 관리 친화적인 LF + 단일 트레일링 개행으로 정규화한다.
+		/// </summary>
+		private static string NormalizeCsv(string csvText)
+		{
+			if (string.IsNullOrEmpty(csvText))
+			{
+				return "\n";
+			}
+
+			var lf = csvText.Replace("\r\n", "\n").Replace("\r", "\n");
+			return lf.TrimEnd('\n') + "\n";
 		}
 
 		private static List<ImportData> GetAllImporters()

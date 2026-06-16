@@ -4,6 +4,11 @@
 이 형식은 [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)를 기반으로 하며,
 이 프로젝트는 [Semantic Versioning](http://semver.org/spec/v2.0.0.html)을 따릅니다.
 
+## [0.8.0] - 2026-06-16
+
+**New**:
+- `ICsvSyncTarget` 인터페이스 추가. 임포터가 이를 구현하면 시트 임포트 직후 다운로드한 원본 CSV 가 `CsvSyncPath` 에 LF 정규화되어 기록된다. 기획자의 시트 수정을 버전 관리되는 CSV 원본에 역동기화하기 위한 선택적 기능이며, 미구현 임포터는 영향을 받지 않는다(하위호환).
+
 ## [0.7.3] - 2026-03-10
 
 **Fixed**:

@@ -43,6 +43,24 @@ namespace GeunedaEditor.GoogleSheetImporter
 		void Import(List<Dictionary<string, string>> data);
 	}
 
+	/// <summary>
+	/// 구글 시트 임포트 시 다운로드한 원본 CSV 를 동기화용 파일로 역기록하려는 임포터가 구현하는 선택적 인터페이스.
+	/// </summary>
+	/// <remarks>
+	/// 빌드에는 사용되지 않지만, 기획자가 시트를 수정한 내용이 버전 관리되는 CSV 원본에 반영되도록
+	/// 한다. <see cref="IGoogleSheetConfigsImporter"/> 구현체가 이 인터페이스를 함께 구현하면,
+	/// 시트 임포트 직후 다운로드한 원본 CSV 텍스트가 <see cref="CsvSyncPath"/> 에 기록된다.
+	/// 미구현 임포터는 영향을 받지 않는다(하위호환).
+	/// </remarks>
+	public interface ICsvSyncTarget
+	{
+		/// <summary>
+		/// 다운로드한 원본 CSV 를 역기록할 프로젝트 상대 경로(예: <c>Assets/.../Foo.csv</c>).
+		/// null 또는 공백이면 동기화하지 않는다.
+		/// </summary>
+		string CsvSyncPath { get; }
+	}
+
 	/// <inheritdoc cref="IGoogleSheetConfigsImporter"/>
 	/// <remarks>
 	/// 임포트된 구글 시트를 <typeparamref name="TScriptableObject"/> 타입의 ScriptableObject에 저장합니다
