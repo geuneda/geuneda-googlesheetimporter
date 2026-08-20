@@ -22,7 +22,8 @@ namespace GeunedaEditor.GoogleSheetImporter
 		private const int MaxRetryCount = 5;
 		private const int InitialDelayMs = 1000;
 		private const int MaxDelayMs = 60000;
-		private const int RequestIntervalMs = 500;
+		private const int MaxConcurrentDownloads = 6;
+		private const int ProgressPollIntervalMs = 100;
 		private const string IsImportingSessionKey = "GoogleSheetToolImporter_IsImporting";
 
 		private static List<ImportData> _importers;
@@ -125,6 +126,12 @@ namespace GeunedaEditor.GoogleSheetImporter
 			EditorGUI.EndDisabledGroup();
 		}
 
+		/// <summary>
+		/// 전체 시트를 2단계로 임포트한다.
+		/// 1단계: 동시 <see cref="MaxConcurrentDownloads"/>개 제한으로 CSV 를 병렬 다운로드.
+		/// 2단계: 임포트 순서대로 적용하며, 에셋 파이프라인 갱신은
+		/// <see cref="AssetDatabase.StartAssetEditing"/>/<see cref="AssetDatabase.StopAssetEditing"/> 로 한 번에 묶는다.
+		/// </summary>
 		private static async void ImportAllSheetsAsync(List<ImportData> importers, string spreadsheetId)
 		{
 			if (IsImporting)
@@ -140,43 +147,54 @@ namespace GeunedaEditor.GoogleSheetImporter
 
 			try
 			{
-				for (var i = 0; i < importers.Count; i++)
+				var csvTexts = await DownloadAllAsync(importers, spreadsheetId, _cts.Token);
+
+				if (_cts.IsCancellationRequested)
 				{
-					if (_cts.IsCancellationRequested)
-					{
-						Debug.LogWarning("Google Sheet import cancelled by user.");
-						break;
-					}
+					Debug.LogWarning("Google Sheet import cancelled by user.");
+					return;
+				}
 
-					var importer = importers[i];
-					var progress = (float)i / importers.Count;
-					var cancelled = EditorUtility.DisplayCancelableProgressBar(
-						"Importing Google Sheets",
-						$"({i + 1}/{importers.Count}) {importer.Type.Name}",
-						progress);
+				AssetDatabase.StartAssetEditing();
 
-					if (cancelled)
+				try
+				{
+					for (var i = 0; i < importers.Count; i++)
 					{
-						_cts.Cancel();
-						Debug.LogWarning("Google Sheet import cancelled by user.");
-						break;
-					}
+						var importer = importers[i];
+						EditorUtility.DisplayProgressBar(
+							"Importing Google Sheets",
+							$"Applying ({i + 1}/{importers.Count}) {importer.Type.Name}",
+							(float)i / importers.Count);
 
-					var success = await ImportSheetWithRetryAsync(importer, spreadsheetId, _cts.Token);
+						if (csvTexts[i] == null)
+						{
+							failCount++;
+							continue;
+						}
 
-					if (success)
-					{
-						successCount++;
+						try
+						{
+							if (ApplyCsv(importer, csvTexts[i]))
+							{
+								successCount++;
+							}
+							else
+							{
+								failCount++;
+							}
+						}
+						catch (Exception ex)
+						{
+							Debug.LogError($"Failed to apply {importer.Type.Name}: {ex.Message}");
+							Debug.LogException(ex);
+							failCount++;
+						}
 					}
-					else
-					{
-						failCount++;
-					}
-
-					if (i < importers.Count - 1)
-					{
-						await EditorDelay(RequestIntervalMs);
-					}
+				}
+				finally
+				{
+					AssetDatabase.StopAssetEditing();
 				}
 			}
 			catch (Exception ex)
@@ -197,6 +215,67 @@ namespace GeunedaEditor.GoogleSheetImporter
 			}
 		}
 
+		/// <summary>
+		/// 모든 임포터의 CSV 를 동시 개수 제한으로 병렬 다운로드한다.
+		/// 반환 배열은 <paramref name="importers"/> 와 같은 인덱스이며, 실패한 항목은 null 이다.
+		/// 진행 바에서 취소하면 토큰을 취소하고 진행 중인 요청이 끝나는 대로 반환한다.
+		/// </summary>
+		private static async Task<string[]> DownloadAllAsync(
+			List<ImportData> importers, string spreadsheetId, CancellationToken cancellationToken)
+		{
+			var csvTexts = new string[importers.Count];
+			var completed = 0;
+
+			using (var semaphore = new SemaphoreSlim(MaxConcurrentDownloads))
+			{
+				var tasks = new Task[importers.Count];
+
+				for (var i = 0; i < importers.Count; i++)
+				{
+					tasks[i] = DownloadSlotAsync(i);
+				}
+
+				var all = Task.WhenAll(tasks);
+
+				while (!all.IsCompleted)
+				{
+					var cancelled = EditorUtility.DisplayCancelableProgressBar(
+						"Importing Google Sheets",
+						$"Downloading ({completed}/{importers.Count})",
+						(float)completed / importers.Count);
+
+					if (cancelled && !_cts.IsCancellationRequested)
+					{
+						_cts.Cancel();
+					}
+
+					await EditorDelay(ProgressPollIntervalMs);
+				}
+
+				async Task DownloadSlotAsync(int index)
+				{
+					await semaphore.WaitAsync();
+
+					try
+					{
+						if (cancellationToken.IsCancellationRequested)
+						{
+							return;
+						}
+
+						csvTexts[index] = await DownloadWithRetryAsync(importers[index], spreadsheetId, cancellationToken);
+					}
+					finally
+					{
+						completed++;
+						semaphore.Release();
+					}
+				}
+			}
+
+			return csvTexts;
+		}
+
 		private static async void ImportSingleSheetAsync(ImportData data, string spreadsheetId)
 		{
 			if (IsImporting)
@@ -211,7 +290,12 @@ namespace GeunedaEditor.GoogleSheetImporter
 			try
 			{
 				EditorUtility.DisplayProgressBar("Importing Google Sheet", data.Type.Name, 0.5f);
-				await ImportSheetWithRetryAsync(data, spreadsheetId, _cts.Token);
+				var csvText = await DownloadWithRetryAsync(data, spreadsheetId, _cts.Token);
+
+				if (csvText != null)
+				{
+					ApplyCsv(data, csvText);
+				}
 			}
 			catch (Exception ex)
 			{
@@ -229,7 +313,10 @@ namespace GeunedaEditor.GoogleSheetImporter
 			}
 		}
 
-		private static async Task<bool> ImportSheetWithRetryAsync(
+		/// <summary>
+		/// 429/5xx 등 일시 오류에 지수 백오프로 재시도하며 CSV 원문을 다운로드한다. 실패 시 null.
+		/// </summary>
+		private static async Task<string> DownloadWithRetryAsync(
 			ImportData data, string spreadsheetId, CancellationToken cancellationToken)
 		{
 			var delayMs = InitialDelayMs;
@@ -238,7 +325,7 @@ namespace GeunedaEditor.GoogleSheetImporter
 			{
 				if (cancellationToken.IsCancellationRequested)
 				{
-					return false;
+					return null;
 				}
 
 				if (attempt > 0)
@@ -248,29 +335,29 @@ namespace GeunedaEditor.GoogleSheetImporter
 					delayMs = Math.Min(delayMs * 2, MaxDelayMs);
 				}
 
-				var result = await SendRequestAsync(data, spreadsheetId);
+				var (result, csvText) = await DownloadAsync(data, spreadsheetId);
 
 				switch (result)
 				{
 					case RequestResult.Success:
-						return true;
+						return csvText;
 					case RequestResult.RateLimited:
 						continue;
 					case RequestResult.Failed:
-						return false;
+						return null;
 				}
 			}
 
 			Debug.LogError($"Failed to import {data.Type.Name} after {MaxRetryCount + 1} attempts. Skipping.");
-			return false;
+			return null;
 		}
 
-		private static async Task<RequestResult> SendRequestAsync(ImportData data, string spreadsheetId)
+		private static async Task<(RequestResult, string)> DownloadAsync(ImportData data, string spreadsheetId)
 		{
 			if (string.IsNullOrWhiteSpace(data.Importer?.GoogleSheetUrl))
 			{
 				Debug.LogError($"GoogleSheetUrl is null or empty for {data.Type.Name}. Skipping.");
-				return RequestResult.Failed;
+				return (RequestResult.Failed, null);
 			}
 
 			var googleSheetUrl = data.Importer.GoogleSheetUrl;
@@ -280,7 +367,7 @@ namespace GeunedaEditor.GoogleSheetImporter
 			if (idPrefixIndex < 0 || editIndex < 0)
 			{
 				Debug.LogError($"Invalid Google Sheet URL format for {data.Type.Name}: {googleSheetUrl}");
-				return RequestResult.Failed;
+				return (RequestResult.Failed, null);
 			}
 
 			var indexStart = idPrefixIndex + 3;
@@ -301,27 +388,35 @@ namespace GeunedaEditor.GoogleSheetImporter
 					if (responseCode == 401 || responseCode == 403 || responseCode == 429 || responseCode >= 500)
 					{
 						Debug.LogWarning($"Request for {data.Type.Name} returned {responseCode}: {request.error}. Will retry.");
-						return RequestResult.RateLimited;
+						return (RequestResult.RateLimited, null);
 					}
 
 					Debug.LogError($"Failed to import {data.Type.Name}: {request.error} (HTTP {responseCode})");
-					return RequestResult.Failed;
+					return (RequestResult.Failed, null);
 				}
 
-				var csvText = request.downloadHandler.text;
-				var values = CsvParser.ConvertCsv(csvText);
-
-				if (values.Count == 0)
-				{
-					Debug.LogWarning($"The return sheet was not in CSV format:\n{csvText}");
-					return RequestResult.Failed;
-				}
-
-				data.Importer.Import(values);
-				SyncCsvFile(data.Importer, csvText, data.Type.Name);
-				Debug.Log($"Finished importing google sheet data from {data.Type.Name}");
-				return RequestResult.Success;
+				return (RequestResult.Success, request.downloadHandler.text);
 			}
+		}
+
+		/// <summary>
+		/// 다운로드한 CSV 원문을 파싱해 임포터에 적용하고 원본 CSV 를 역동기화한다.
+		/// </summary>
+		/// <returns>CSV 형식이 아니면 false</returns>
+		private static bool ApplyCsv(ImportData data, string csvText)
+		{
+			var values = CsvParser.ConvertCsv(csvText);
+
+			if (values.Count == 0)
+			{
+				Debug.LogWarning($"The return sheet for {data.Type.Name} was not in CSV format:\n{csvText}");
+				return false;
+			}
+
+			data.Importer.Import(values);
+			SyncCsvFile(data.Importer, csvText, data.Type.Name);
+			Debug.Log($"Finished importing google sheet data from {data.Type.Name}");
+			return true;
 		}
 
 		/// <summary>
