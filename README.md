@@ -143,20 +143,20 @@ public class GameConfigsImporter : GoogleSheetSingleConfigImporter<GameConfig, G
 
 `GoogleSheetSingleConfigSubListImporter` 는 `Key` 가 `필드명[]` 인 행을 서브 리스트의 헤더로, 바로 아래 `Key` 가 `#` 인 행들을 데이터로 읽습니다. 헤더 행의 각 열 값이 하위 타입의 필드 이름이 됩니다. 대상 필드는 `List<T>` 여야 합니다.
 
-| $Memo | Key | Value | Extra |
-|-------|-----|-------|-------|
-| | MaxLevel | 50 | |
-| | Rewards[] | Id | Amount |
-| | # | 1 | 100 |
-| | # | 2 | 200 |
+| Key | Value | Extra |
+|-----|-------|-------|
+| MaxLevel | 50 | |
+| Rewards[] | Id | Amount |
+| # | 1 | 100 |
+| # | 2 | 200 |
 
-주의: `CsvParser.ConvertCsv` 는 줄이 `#` 으로 시작하면 설명 행으로 보고 버립니다. `Key` 가 첫 열이면 `#` 데이터 행이 모두 사라지므로, 위처럼 `Key` 앞에 `$` 주석 열을 두어 줄이 `#` 으로 시작하지 않게 합니다.
+`CsvParser.ConvertCsv` 는 `#` 으로 시작하는 줄을 설명 행으로 버리지만, 첫 열이 `[]` 로 끝나는 서브 리스트 헤더 행 바로 아래에 이어지는, 첫 열이 정확히 `#` 인 행은 데이터로 남깁니다. 그래서 위처럼 `Key` 를 첫 열에 둘 수 있습니다. 서브 리스트 헤더 바로 아래에는 `#` 만 있는 설명 행을 두지 마세요. 데이터 행으로 읽힙니다(`#설명` 처럼 다른 글자가 붙은 행은 건너뜁니다).
 
 ### CSV 규칙
 
 - 행 구분자는 `\r\n` 입니다(Google 시트 CSV 내보내기 형식). `\n` 만 있는 텍스트는 빈 결과가 됩니다.
 - 첫 행은 헤더입니다. 헤더가 `$` 로 시작하는 열은 무시됩니다.
-- `#` 으로 시작하는 줄은 설명 행으로 건너뜁니다.
+- `#` 으로 시작하는 줄은 설명 행으로 건너뜁니다. 서브 리스트 데이터 행은 예외입니다([서브 리스트](#서브-리스트) 참고).
 - 셀 값은 앞뒤 공백이 제거되고, 값이 모자란 열은 빈 문자열로 채워집니다.
 
 ### 셀 값 파싱(`CsvParser`)
@@ -168,7 +168,7 @@ public class GameConfigsImporter : GoogleSheetSingleConfigImporter<GameConfig, G
 | `string`, enum, 숫자/`bool` 등 값 타입 | 그대로. 값 타입은 `Convert.ChangeType`(현재 컬처) |
 | `DateTime`, `TimeSpan` | `DateTime.Parse`, `TimeSpan.Parse` |
 | `int?` 등 `Nullable<T>` | 빈 셀은 `null` |
-| `List<T>` | `1,2,3`, `[1,2]{3}(4)` 처럼 `, ( ) [ ] { }` 로 구분 |
+| `List<T>`, `T[]` | `1,2,3`, `[1,2]{3}(4)` 처럼 `, ( ) [ ] { }` 로 구분 |
 | `Dictionary<K, V>`, `UnitySerializedDictionary<K, V>` 파생 | `a:1,b:2`(쌍 구분자 `: < > = \|`) 또는 `a,1,b,2`. 빈 셀은 `null` |
 | 필드가 `Key`/`Value` 또는 `Value1`/`Value2` 두 개인 제네릭 구조체(예: `StructPair<K, V>`) | `1:2` |
 | 그 밖의 참조 타입 | 셀 텍스트를 JSON 문자열로 감싸 `JsonConvert.DeserializeObject` |
@@ -210,8 +210,6 @@ public static class SpawnCsv
 }
 ```
 
-`T[]` 배열 필드는 쓰지 마세요. 배열도 `List<T>` 로 파싱되어 필드에 넣을 때 예외가 납니다.
-
 값 타입 필드에 빈 셀이 있으면 예외가 납니다(숫자는 `FormatException`, enum 은 `ArgumentException`). 비어 있을 수 있는 값은 `Nullable<T>` 를 쓰거나 역직렬화기로 처리합니다.
 
 ### 임포트 실행
@@ -239,13 +237,14 @@ public class EnemyConfigsImporter : GoogleSheetConfigsImporter<EnemyConfig, Enem
 
 ## 샘플
 
-Package Manager 에서 **Importers Example** 을 가져올 수 있습니다. 참고용 코드이며 그대로는 컴파일되지 않습니다.
+Package Manager 에서 **Importers Example** 을 가져올 수 있습니다. 임포터는 `Editor/` 폴더, 임포터가 쓰는 데이터 타입은 `Configs/` 폴더에 있습니다.
 
 - `DataConfigsImporter`: `GoogleSheetConfigsImporter` 예제
 - `GameConfigsImporter`: `GoogleSheetSingleConfigImporter` 예제
 - `GameIdsImporter`: 시트로 enum 과 조회 코드를 생성하는 `[GoogleSheetImportOrder(0)]` 예제
+- `Configs/DataConfigs.cs`, `Configs/GameConfigs.cs`: 예제용 최소 데이터 타입(`DataConfig`, `DataConfigs`, `GameConfig`, `GameConfigs`). 실제 시트에 맞게 필드를 추가합니다
 
-`Configs` 네임스페이스의 데이터 타입(`DataConfig`, `GameConfig` 등)은 포함되어 있지 않으므로 직접 만들어야 합니다. `GameIdsImporter` 는 제거된 `IGoogleSheetImporter` 를 구현하고 있으니 `IGoogleSheetConfigsImporter` 로 바꾸고 `using Geuneda.GoogleSheetImporter;` 를 추가해야 합니다.
+샘플의 시트 URL 은 예제용입니다. 자기 시트 URL 로 바꿔서 씁니다.
 
 ## 요구 사항과 의존성
 

@@ -21,6 +21,11 @@ namespace Geuneda.GoogleSheetImporter
 
 		public static readonly char[] PairSplitChars = { ':', '<', '>', '=', '|' };
 		public static readonly char[] ArraySplitChars = { ',', '(', ')', '[', ']', '{', '}' };
+
+		/// <summary>
+		/// 줄바꿈 문자 목록. 하위 호환을 위해 남겨 둔 공개 필드이며 패키지 내부에서는 사용하지 않습니다
+		/// (<see cref="ConvertCsv"/>는 "\r\n"으로만 행을 나눕니다).
+		/// </summary>
 		public static readonly string[] NewLineChars = { "\r\n", "\r", "\n" };
 
 		/// <summary>
@@ -28,22 +33,39 @@ namespace Geuneda.GoogleSheetImporter
 		/// 각 행은 반환되는 리스트의 요소입니다.
 		/// 각 열은 반환되는 딕셔너리의 요소입니다. 딕셔너리 키는 CSV 헤더가 됩니다.
 		/// </summary>
+		/// <remarks>
+		/// <see cref="IGNORE_FIELD_CHAR"/>(#)로 시작하는 행은 설명 행으로 건너뜁니다.
+		/// 단, 첫 열이 <see cref="SUB_LIST_SUFFIX"/>로 끝나는 서브 리스트 헤더 행 바로 아래에 이어지는,
+		/// 첫 열이 정확히 #인 행은 서브 리스트 데이터 행이므로 유지합니다.
+		/// </remarks>
 		public static List<Dictionary<string, string>> ConvertCsv(string csv)
 		{
 			var lines = csv.Split(new[] { "\r\n" }, StringSplitOptions.None);
 			var list = new List<Dictionary<string, string>>(lines.Length - 1);
 			var headlines = EnumerateCsvLine(lines[0]);
+			var isInSubList = false;
 
 			for (var i = 1; i < lines.Length; i++)
 			{
-				// IGNORE_FIELD_CHAR(#)로 시작하는 행은 설명 행으로 간주하여 건너뜀
+				var values = EnumerateCsvLine(lines[i]);
+				var firstValue = values.Length > 0 ? values[0].Trim() : "";
+
 				if (lines[i].StartsWith(IGNORE_FIELD_CHAR))
 				{
-					continue;
+					// IGNORE_FIELD_CHAR(#)로 시작하는 행은 설명 행으로 간주하여 건너뜀
+					// 서브 리스트 헤더 아래의 # 데이터 행은 예외
+					if (!isInSubList || firstValue != IGNORE_FIELD_CHAR)
+					{
+						continue;
+					}
+				}
+				else if (!isInSubList || firstValue != IGNORE_FIELD_CHAR)
+				{
+					// 따옴표로 감싼 "#" 처럼 원문은 #로 시작하지 않아도 첫 셀이 #인 서브 리스트 데이터 행은 상태를 유지
+					isInSubList = firstValue.EndsWith(SUB_LIST_SUFFIX);
 				}
 
 				var dictionary = new Dictionary<string, string>(headlines.Length);
-				var values = EnumerateCsvLine(lines[i]);
 
 				for (var j = 0; j < headlines.Length; j++)
 				{
@@ -124,7 +146,14 @@ namespace Geuneda.GoogleSheetImporter
 
 			if (type.IsArray)
 			{
-				return ArrayParse(data, type.GetElementType(), deserializers);
+				// ArrayParse는 List<T>를 반환하므로 배열 필드에 설정할 수 있도록 T[]로 변환
+				var elementType = type.GetElementType();
+				var list = (IList)ArrayParse(data, elementType, deserializers);
+				var array = Array.CreateInstance(elementType, list.Count);
+
+				list.CopyTo(array, 0);
+
+				return array;
 			}
 
 			if (listType.IsAssignableFrom(type))
@@ -154,6 +183,7 @@ namespace Geuneda.GoogleSheetImporter
 		/// <summary>
 		/// 고유한 헤더/정의를 가진 사용자 정의 복합(비원시) 타입의 리스트를 역직렬화합니다.
 		/// </summary>
+		/// <param name="fieldName">사용하지 않습니다. 하위 호환을 위해 남겨 둔 매개변수입니다</param>
 		public static object DeserializeSubList(List<Dictionary<string, string>> data, int startIndex, Type type,
 												string fieldName,
 												params Func<string, Type, object>[] deserializers)
@@ -245,8 +275,7 @@ namespace Geuneda.GoogleSheetImporter
 		/// 주어진 <paramref name="text"/>를 <seealso cref="Dictionary{TKey, TValue}"/> 타입으로 파싱합니다.
 		/// <seealso cref="ArrayParse{T}"/>와 동일한 규칙을 따르고 최소 2개의 요소가 있으면
 		/// <seealso cref="Dictionary{TKey, TValue}"/> 타입 형식입니다.
-		/// 주어진 <paramref name="text"/>가 <seealso cref="Dictionary{TKey, TValue}"/> 타입 형식이 아닌 경우
-		/// 빈 딕셔너리를 반환합니다
+		/// 주어진 <paramref name="text"/>에서 요소를 하나도 얻지 못하면(빈 텍스트 등) 빈 딕셔너리가 아니라 null을 반환합니다
 		/// </summary>
 		/// <remarks>
 		/// 특정 파싱을 위한 추가 사용자 정의 <paramref name="deserializers"/>를 제공합니다

@@ -20,7 +20,13 @@ namespace SheetImporters
 			foreach (var row in data)
 			{
 				var field = type.GetField(row["Key"]);
-				
+
+				// GameConfig 에 없는 키는 건너뜀
+				if (field == null)
+				{
+					continue;
+				}
+
 				field.SetValue(config, CsvParser.Parse(row["Value"], field.FieldType));
 			}
 			

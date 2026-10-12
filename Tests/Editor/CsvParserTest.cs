@@ -37,10 +37,16 @@ namespace GeunedaEditor.GoogleSheetImporter.Tests
 			public float Float;
 			public double Double;
 			public MockEnum Enum;
-			//public int[] Array;
-			// public List<int> List;
+			public int[] Array;
+			public List<int> List;
 			// public KeyValuePair<int,int> Pair;
 			public Dictionary<int, int> Dictionary;
+		}
+
+		public class MockSubListItem
+		{
+			public int Id;
+			public int Amount;
 		}
 
 		[Test]
@@ -107,8 +113,8 @@ namespace GeunedaEditor.GoogleSheetImporter.Tests
 			Assert.AreEqual(1.1f, result.Float);
 			Assert.AreEqual(1.1d, result.Double);
 			Assert.AreEqual(MockEnum.MockValue, result.Enum);
-			//Assert.AreEqual(new[] {1, 2}, result.Array);
-			// Assert.AreEqual(new List<int> {1, 2}, result.List);
+			Assert.AreEqual(new[] { 1, 2 }, result.Array);
+			Assert.AreEqual(new List<int> { 1, 2 }, result.List);
 			// Assert.AreEqual(new KeyValuePair<int, int>(1, 2), result.Pair);
 			Assert.AreEqual(new Dictionary<int, int> { { 1, 2 } }, result.Dictionary);
 		}
@@ -126,8 +132,8 @@ namespace GeunedaEditor.GoogleSheetImporter.Tests
 			Assert.AreEqual(1.1f, result.Float);
 			Assert.AreEqual(0, result.Double);
 			Assert.AreEqual(MockEnum.MockValue, result.Enum);
-			//Assert.AreEqual(null, result.Array);
-			// Assert.AreEqual(null, result.List);
+			Assert.AreEqual(null, result.Array);
+			Assert.AreEqual(null, result.List);
 			// Assert.AreEqual(new KeyValuePair<int, int>(), result.Pair);
 			Assert.AreEqual(null, result.Dictionary);
 		}
@@ -145,10 +151,91 @@ namespace GeunedaEditor.GoogleSheetImporter.Tests
 			Assert.AreEqual(1.1f, result.Float);
 			Assert.AreEqual(0, result.Double);
 			Assert.AreEqual(MockEnum.MockValue, result.Enum);
-			//Assert.AreEqual(null, result.Array);
-			// Assert.AreEqual(null, result.List);
+			Assert.AreEqual(null, result.Array);
+			Assert.AreEqual(null, result.List);
 			// Assert.AreEqual(new KeyValuePair<int, int>(), result.Pair);
 			Assert.AreEqual(null, result.Dictionary);
+		}
+
+		[Test]
+		public void ConvertCsv_DescriptionRow_Skipped()
+		{
+			var csv = "Key,Value\r\n" +
+					  "#,설명 행\r\n" +
+					  "MaxLevel,50\r\n" +
+					  "#설명,설명 행";
+			var dic = CsvParser.ConvertCsv(csv);
+
+			Assert.AreEqual(1, dic.Count);
+			Assert.AreEqual("MaxLevel", dic[0]["Key"]);
+		}
+
+		[Test]
+		public void ConvertCsv_SubListRowsWithKeyFirstColumn_Kept()
+		{
+			var csv = "Key,Value,Extra\r\n" +
+					  "MaxLevel,50,\r\n" +
+					  "Rewards[],Id,Amount\r\n" +
+					  "#,1,100\r\n" +
+					  "#,2,200\r\n" +
+					  "MinLevel,1,\r\n" +
+					  "#,설명 행,";
+			var dic = CsvParser.ConvertCsv(csv);
+
+			Assert.AreEqual(5, dic.Count);
+			Assert.AreEqual("Rewards[]", dic[1]["Key"]);
+			Assert.AreEqual("#", dic[2]["Key"]);
+			Assert.AreEqual("#", dic[3]["Key"]);
+			Assert.AreEqual("MinLevel", dic[4]["Key"]);
+		}
+
+		[Test]
+		public void ConvertCsv_SubListQuotedHashRow_KeepsSubListState()
+		{
+			var csv = "Key,Value\r\n" +
+					  "Rewards[],Id\r\n" +
+					  "\"#\",1\r\n" +
+					  "#설명,설명 행\r\n" +
+					  "#,2\r\n" +
+					  "MinLevel,1";
+			var dic = CsvParser.ConvertCsv(csv);
+
+			// 인용된 "#" 행 뒤에도 서브 리스트가 이어지고, 중간 설명 행만 빠져야 한다
+			Assert.AreEqual(4, dic.Count);
+			Assert.AreEqual("Rewards[]", dic[0]["Key"]);
+			Assert.AreEqual("#", dic[1]["Key"]);
+			Assert.AreEqual("1", dic[1]["Value"]);
+			Assert.AreEqual("#", dic[2]["Key"]);
+			Assert.AreEqual("2", dic[2]["Value"]);
+			Assert.AreEqual("MinLevel", dic[3]["Key"]);
+		}
+
+		[Test]
+		public void DeserializeSubList_KeyFirstColumn_Successfully()
+		{
+			var csv = "Key,Value,Extra\r\n" +
+					  "MaxLevel,50,\r\n" +
+					  "Rewards[],Id,Amount\r\n" +
+					  "#,1,100\r\n" +
+					  "#,2,200";
+			var dic = CsvParser.ConvertCsv(csv);
+			var result = (List<MockSubListItem>)CsvParser.DeserializeSubList(dic, 1, typeof(List<MockSubListItem>),
+				"Rewards");
+
+			Assert.AreEqual(2, result.Count);
+			Assert.AreEqual(1, result[0].Id);
+			Assert.AreEqual(100, result[0].Amount);
+			Assert.AreEqual(2, result[1].Id);
+			Assert.AreEqual(200, result[1].Amount);
+		}
+
+		[Test]
+		public void DeserializeObject_ArrayType_ReturnsArray()
+		{
+			var result = CsvParser.DeserializeObject("1,2,3", typeof(int[]));
+
+			Assert.IsInstanceOf<int[]>(result);
+			Assert.AreEqual(new[] { 1, 2, 3 }, result);
 		}
 
 		[Test]

@@ -4,6 +4,23 @@
 이 형식은 [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)를 기반으로 하며,
 이 프로젝트는 [Semantic Versioning](http://semver.org/spec/v2.0.0.html)을 따릅니다.
 
+## [0.9.1] - 2026-10-12
+
+**Fixed**:
+- `CsvParser.ConvertCsv` 가 `#` 으로 시작하는 줄을 설명 행으로 버리면서 서브 리스트 데이터 행(`Key` 가 `#`)까지 버려, `Key` 가 첫 열인 시트에서 `GoogleSheetSingleConfigSubListImporter` 의 서브 리스트가 항상 비던 문제를 수정. 첫 열이 `[]` 로 끝나는 서브 리스트 헤더 행 바로 아래에 이어지는, 첫 열이 정확히 `#` 인 행은 유지하고 그 밖의 `#` 행은 계속 건너뛴다
+- `CsvParser.DeserializeObject` 가 `T[]` 타입에도 `List<T>` 를 반환해 `DeserializeTo` 로 배열 필드를 채우면 예외가 나던 문제를 수정. 배열 타입이면 `T[]` 를 반환한다
+- `Importers Example` 샘플을 현재 API 로 수정. `GameIdsImporter` 가 `IGoogleSheetConfigsImporter` 를 구현하고 `Geuneda.GoogleSheetImporter` 를 참조하도록 바꾸고, 샘플이 참조하는 `Configs` 타입(`DataConfig`, `DataConfigs`, `GameConfig`, `GameConfigs`)을 샘플에 추가
+- `package.json` 설명의 메뉴 경로를 실제 경로(`Tools > GoogleSheet Importer > Import Google Sheet Data`)로 수정
+- `ParseIgnoreAttribute`, `DictionaryParse`(빈 입력이면 `null` 반환), `DeserializeSubList`(`fieldName` 미사용), `NewLineChars`(내부 미사용) 주석을 실제 동작에 맞게 수정
+
+**Changed**:
+- 에디터 어셈블리에서 사용하지 않는 `Unity.Addressables`, `Unity.Addressables.Editor` 참조를 제거
+
+## [0.9.0] - 2026-08-21
+
+**Changed**:
+- 전체 임포트를 2단계로 재구성. CSV 를 최대 6개까지 동시에 병렬 다운로드한 뒤, 임포트 순서대로 `AssetDatabase.StartAssetEditing`/`StopAssetEditing` 안에서 일괄 적용한다. 다운로드 중에는 진행 바에서 취소할 수 있다
+
 ## [0.8.0] - 2026-06-16
 
 **New**:
