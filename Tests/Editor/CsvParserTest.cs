@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Geuneda.GoogleSheetImporter;
+using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 
 // ReSharper disable ClassNeverInstantiated.Global
@@ -41,6 +42,19 @@ namespace GeunedaEditor.GoogleSheetImporter.Tests
 			public List<int> List;
 			// public KeyValuePair<int,int> Pair;
 			public Dictionary<int, int> Dictionary;
+		}
+
+		public class MockPayload
+		{
+			// JSON 키(a, b)는 대소문자를 가리지 않고 맞춘다
+			public int A;
+			public int[] B;
+		}
+
+		public class MockJsonHolder
+		{
+			public string Text;
+			public MockPayload Payload;
 		}
 
 		public class MockSubListItem
@@ -97,6 +111,72 @@ namespace GeunedaEditor.GoogleSheetImporter.Tests
 			var dic = CsvParser.ConvertCsv(csv);
 
 			Assert.AreEqual("", dic[0]["double"]);
+		}
+
+		[Test]
+		public void ConvertCsv_QuotedCells_UnescapeQuotes()
+		{
+			// 구글 시트는 따옴표·쉼표가 든 셀을 "..." 로 감싸고 안의 " 를 "" 로 내보낸다
+			var csv = "Id,Json,Text,Empty,Quote\r\n" +
+					  "1,\"{\"\"a\"\":1,\"\"b\"\":[1,2]}\",\"say \"\"hi\"\", ok\",\"\",\"\"\"\"\"\"";
+			var dic = CsvParser.ConvertCsv(csv);
+
+			Assert.AreEqual(1, dic.Count);
+			Assert.AreEqual("1", dic[0]["Id"]);
+			Assert.AreEqual("{\"a\":1,\"b\":[1,2]}", dic[0]["Json"]);
+			Assert.AreEqual("say \"hi\", ok", dic[0]["Text"]);
+			Assert.AreEqual("", dic[0]["Empty"]);
+			Assert.AreEqual("\"\"", dic[0]["Quote"]);
+		}
+
+		[Test]
+		public void ConvertCsv_QuotedCellWithLineBreak_StaysInOneRow()
+		{
+			// 행은 \r\n 으로만 나누므로 셀 안의 줄바꿈(\n)은 그 셀에 남는다
+			var csv = "Id,Text\r\n" +
+					  "1,\"first\nsecond\"\r\n" +
+					  "2,plain";
+			var dic = CsvParser.ConvertCsv(csv);
+
+			Assert.AreEqual(2, dic.Count);
+			Assert.AreEqual("first\nsecond", dic[0]["Text"]);
+			Assert.AreEqual("plain", dic[1]["Text"]);
+		}
+
+		[Test]
+		public void Deserialize_JsonObjectCell_ToClassField()
+		{
+			var csv = "Text,Payload\r\n" +
+					  "\"{\"\"a\"\":1}\",\"{\"\"a\"\":3,\"\"b\"\":[1,2]}\"";
+			var dic = CsvParser.ConvertCsv(csv);
+			var result = CsvParser.DeserializeTo<MockJsonHolder>(dic[0]);
+
+			// 문자열 필드는 JSON 글자 그대로, 클래스 필드는 JSON 객체로 읽는다
+			Assert.AreEqual("{\"a\":1}", result.Text);
+			Assert.IsNotNull(result.Payload);
+			Assert.AreEqual(3, result.Payload.A);
+			Assert.AreEqual(new[] { 1, 2 }, result.Payload.B);
+		}
+
+		[Test]
+		public void Parse_JsonObjectCell_CustomDeserializerTakesPriority()
+		{
+			var custom = new MockPayload { A = 9 };
+			var result = CsvParser.Parse<MockPayload>("{\"a\":1}", (text, type) => type == typeof(MockPayload) ? custom : null);
+
+			Assert.AreSame(custom, result);
+		}
+
+		[Test]
+		public void Parse_JsonObjectCell_ObjectTypeBecomesJObject()
+		{
+			// object 필드도 JSON 객체 셀이면 JObject 로 읽는다(이전에는 따옴표가 있으면 예외, 없으면 문자열)
+			var result = CsvParser.Parse<object>("{\"a\":1}");
+			var empty = CsvParser.Parse<object>("{}");
+
+			Assert.IsInstanceOf<JObject>(result);
+			Assert.AreEqual(1, ((JObject)result)["a"].Value<int>());
+			Assert.IsInstanceOf<JObject>(empty);
 		}
 
 		[Test]

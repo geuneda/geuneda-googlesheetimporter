@@ -158,6 +158,7 @@ public class GameConfigsImporter : GoogleSheetSingleConfigImporter<GameConfig, G
 - 첫 행은 헤더입니다. 헤더가 `$` 로 시작하는 열은 무시됩니다.
 - `#` 으로 시작하는 줄은 설명 행으로 건너뜁니다. 서브 리스트 데이터 행은 예외입니다([서브 리스트](#서브-리스트) 참고).
 - 셀 값은 앞뒤 공백이 제거되고, 값이 모자란 열은 빈 문자열로 채워집니다.
+- 쉼표·따옴표·줄바꿈이 든 셀은 Google 시트가 `"..."` 로 감싸고 안의 `"` 를 `""` 로 내보냅니다. 파서는 바깥 따옴표를 벗기고 `""` 를 `"` 로 되돌립니다(시트에 `{"a":1}` 이라고 쓴 셀은 그대로 `{"a":1}`). 빈 따옴표 셀(`""`)은 빈 문자열입니다. 행은 `\r\n` 으로만 나누므로 셀 안의 줄바꿈(`\n`)은 그 셀에 남습니다.
 
 ### 셀 값 파싱(`CsvParser`)
 
@@ -171,9 +172,17 @@ public class GameConfigsImporter : GoogleSheetSingleConfigImporter<GameConfig, G
 | `List<T>`, `T[]` | `1,2,3`, `[1,2]{3}(4)` 처럼 `, ( ) [ ] { }` 로 구분 |
 | `Dictionary<K, V>`, `UnitySerializedDictionary<K, V>` 파생 | `a:1,b:2`(쌍 구분자 `: < > = \|`) 또는 `a,1,b,2`. 빈 셀은 `null` |
 | 필드가 `Key`/`Value` 또는 `Value1`/`Value2` 두 개인 제네릭 구조체(예: `StructPair<K, V>`) | `1:2` |
-| 그 밖의 참조 타입 | 셀 텍스트를 JSON 문자열로 감싸 `JsonConvert.DeserializeObject` |
+| 그 밖의 참조 타입(클래스) | 셀이 `{` 로 시작하고 `}` 로 끝나면 JSON 객체로 `JsonConvert.DeserializeObject`(키는 대소문자 무시, `object` 필드는 `JObject`). 아니면 셀 텍스트를 JSON 문자열로 감싸 `JsonConvert.DeserializeObject` |
 
 Key/Value 구조체는 `(key, value)` 생성자가 있어야 합니다. `System.Collections.Generic.KeyValuePair<K, V>` 는 public 필드가 없어서 이 규칙에 해당하지 않습니다.
+
+**셀에 JSON 을 넣을 때**
+
+- 클래스 필드: 셀에 JSON 객체(`{"a":1,"b":[1,2]}`)를 그대로 쓰면 그 클래스로 읽습니다. 잘못된 JSON 이면 Newtonsoft 예외가 그대로 나서 임포트가 실패합니다.
+- 구조체 필드: 값 타입 경로(`Convert.ChangeType`)를 타므로 JSON 객체를 읽지 못합니다. 역직렬화기를 넘기거나 클래스로 바꿉니다.
+- `string` 필드: JSON 글자 그대로 들어오니 필요할 때 직접 `JsonConvert.DeserializeObject` 합니다.
+- `List<T>`, `T[]` 필드: 셀을 `, ( ) [ ] { }` 로 쪼갠 뒤 원소마다 역직렬화기를 부르므로 JSON 배열(`[{"a":1},{"a":2}]`)은 넣을 수 없고 역직렬화기로도 우회할 수 없습니다. 배열을 감싼 클래스(`{"items":[...]}`)로 받거나 `string` 필드로 받아 직접 파싱합니다.
+- `object` 필드: JSON 객체 셀은 `JObject` 로 읽습니다.
 
 그 밖의 타입은 `Func<string, Type, object>` 역직렬화기를 넘겨 처리합니다. `null` 을 반환하면 다음 단계로 넘어갑니다. 역직렬화기는 string, enum, Key/Value 구조체 판별 다음에 실행되고, 배열/딕셔너리의 각 요소에도 적용됩니다.
 

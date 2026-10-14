@@ -414,20 +414,34 @@ namespace Geuneda.GoogleSheetImporter
 				throw;
 			}
 
+			// 셀에 JSON 객체({"a":1})를 쓴 클래스 필드는 그대로 JSON 으로 읽는다(object 필드는 JObject).
+			// 아래 문자열 감싸기는 셀에 따옴표가 있으면 JSON 이 깨지므로 JSON 객체 셀을 읽을 수 없다.
+			if (text.StartsWith("{") && text.EndsWith("}"))
+			{
+				return JsonConvert.DeserializeObject(text, type);
+			}
+
 			return JsonConvert.DeserializeObject($"\"{text}\"", type);
 		}
 
+		/// <summary>
+		/// CSV 한 행을 셀로 나눕니다. 따옴표로 감싼 셀(구글 시트는 쉼표·따옴표·줄바꿈이 든 셀을 이렇게 내보냄)은
+		/// 바깥 따옴표를 벗기고 안의 <c>""</c> 를 <c>"</c> 로 되돌립니다. 빈 따옴표 셀(<c>""</c>)은 빈 문자열입니다.
+		/// </summary>
 		private static string[] EnumerateCsvLine(string line)
 		{
 			// 정규식 출처: http://wiki.unity3d.com/index.php?title=CSVReader
-			const string match = @"(((?<x>(?=[,\r\n]+))|""(?<x>([^""]|"""")+)""|(?<x>[^,\r\n]+)),?)";
+			// 따옴표 셀은 q, 나머지는 x 로 받아 따옴표 셀만 이스케이프를 되돌린다.
+			const string match = @"(((?<x>(?=[,\r\n]+))|""(?<q>([^""]|"""")*)""|(?<x>[^,\r\n]+)),?)";
 
 			var matches = Regex.Matches(line, match, RegexOptions.ExplicitCapture);
 			var ret = new string[matches.Count];
 
 			for (var i = 0; i < matches.Count; i++)
 			{
-				ret[i] = matches[i].Groups[1].Value;
+				var quoted = matches[i].Groups["q"];
+
+				ret[i] = quoted.Success ? quoted.Value.Replace("\"\"", "\"") : matches[i].Groups["x"].Value;
 			}
 
 			return ret;
